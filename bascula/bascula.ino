@@ -1,0 +1,93 @@
+// ==================================================================================================
+//      Sensor HX711 zur Auwertung eines Waagesensors mit einer Auflösung von zumindest 0,01 g
+// ==================================================================================================
+
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
+
+
+LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+
+// Anschlüsse:
+// GND - GND
+// VCC - 5V
+// SDA - ANALOG Pin 4
+// SCL - ANALOG pin 5
+
+#include <HX711.h>                       
+
+HX711 scale(A1, A0);  
+
+long Rohwert;                // vom HX711 gelieferter Rohwert
+long offset = -115920;   // offset
+float Scale = 6647.4;     // scale
+float Masse;                  // berechnete Masse in g
+
+const int buttonPin = 2;     // the number of the pushbutton pin
+int buttonState = 0;         // variable for reading the pushbutton status
+
+
+// =====================
+// ======= SETUP =======
+// =====================
+
+void setup()
+   { 
+    Serial.begin(115200); 
+    
+    scale.set_gain(128);   // A-Kanal: gain = 64 oder 128; B-Kanal: fix 32
+    
+    pinMode(buttonPin, INPUT);
+    
+    lcd.init();                      // initialize the lcd
+
+    // Print a message to the LCD.
+    lcd.backlight();
+    lcd.setCursor(4,0);
+    lcd.print("mg-Waage");
+    
+    delay(3000);
+    
+    lcd.setCursor(4,0);
+    lcd.print("        ");
+    lcd.setCursor(0,0);
+    lcd.print("m = ");    
+   }
+
+
+// ============================
+// ======= HAUPTSCHLEIFE ======
+// ============================
+
+void loop()
+   {
+    buttonState = digitalRead(buttonPin);    // button for new tara (offset)
+    
+    if (buttonState == HIGH)
+       {        
+        scale.read_average(20);
+        offset = scale.read_average(20);   // Einlesen von 20 Rohwerten zur Ermittlung des tara (offset)
+       }
+     
+    scale.read_average(20);
+    Rohwert = scale.read_average(20);   // Einlesen von 20 Rohwerten
+  
+    Masse = (Rohwert - offset) / Scale;  // Berechnung der Masse in g
+  
+    /*
+    Serial.print("Wert = ");
+    Serial.println(Rohwert);
+    */
+    
+    Serial.print("Masse = ");
+    Serial.println(Masse,2);
+    
+    
+    lcd.setCursor(4,0);
+    lcd.print("            ");
+    lcd.setCursor(4,0);
+    lcd.print(Masse,2);
+    lcd.print(" g");
+        
+    delay(50);
+   }   
